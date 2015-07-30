@@ -183,7 +183,7 @@ class CssRegression extends Module implements DependsOnModule
             $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
             copy($image->getImageFilename(), $referenceImagePath);
 
-            $this->currentTestCase->markTestSkipped(
+            $this->currentTestCase->markTestIncomplete(
                 'Reference Image does not exist.
                 Test is skipeed but will now copy reference image to target directory...'
             );
