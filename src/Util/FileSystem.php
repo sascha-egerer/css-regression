@@ -59,8 +59,10 @@ class FileSystem {
         $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
+
         return $this->getReferenceImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
+        . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
         . $identifier . '.png';
     }
 
@@ -76,9 +78,17 @@ class FileSystem {
         $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
+        $fileNameParts = array(
+            $this->module->_getModuleInitTime(),
+            $this->getCurrentWindowSizeString(),
+            $identifier,
+            $suffix,
+            'png'
+        );
+
         return $this->getFailImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
-        . $this->module->_getModuleInitTime() . '.' . $identifier . '.' . $suffix . '.png';
+        . implode('.', $fileNameParts);
     }
 
     /**
@@ -123,6 +133,18 @@ class FileSystem {
      */
     public function getTempImagePath($identifier)
     {
-        return $this->getTempDirectory() . $this->module->_getModuleInitTime() . '.' . $identifier . '.png';
+        $fileNameParts = array(
+            $this->module->_getModuleInitTime(),
+            $this->getCurrentWindowSizeString(),
+            $identifier,
+            'png'
+        );
+        return $this->getTempDirectory() . implode('.', $fileNameParts);
+    }
+
+    public function getCurrentWindowSizeString()
+    {
+        $windowSize = $this->module->getWebdriver()->webDriver->manage()->window()->getSize();
+        return $windowSize->getWidth() . 'x' . $windowSize->getHeight();
     }
 }

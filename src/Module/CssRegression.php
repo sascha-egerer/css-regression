@@ -324,4 +324,9 @@ class CssRegression extends Module implements DependsOnModule
     {
         return $this->suitePath;
     }
+
+    public function getWebdriver()
+    {
+        return $this->webDriver;
+    }
 }
