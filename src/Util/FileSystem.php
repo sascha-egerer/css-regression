@@ -7,7 +7,8 @@ use SaschaEgerer\CodeceptionCssRegression\Module\CssRegression;
 /**
  * Provide some methods for filesystem related actions
  */
-class FileSystem {
+class FileSystem
+{
 
     /**
      * @var CssRegression
@@ -65,7 +66,28 @@ class FileSystem {
         return $this->getReferenceImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
         . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
-        . $identifier . '.png';
+        . $this->sanitizeFilename($identifier) . '.png';
+    }
+
+    /**
+     * Get the directory where reference images are stored
+     *
+     * @return string
+     */
+    public function getReferenceImageDirectory()
+    {
+        return \Codeception\Configuration::dataDir()
+        . rtrim($this->module->_getConfig('referenceImageDirectory'), DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCurrentWindowSizeString()
+    {
+        $windowSize = $this->module->getWebdriver()->webDriver->manage()->window()->getSize();
+        return $windowSize->getWidth() . 'x' . $windowSize->getHeight();
     }
 
     /**
@@ -90,29 +112,7 @@ class FileSystem {
 
         return $this->getFailImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
-        . implode('.', $fileNameParts);
-    }
-
-    /**
-     * Get the directory to store temporary files
-     *
-     * @return string
-     */
-    public function getTempDirectory()
-    {
-        return \Codeception\Configuration::outputDir() . 'debug' . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Get the directory where reference images are stored
-     *
-     * @return string
-     */
-    public function getReferenceImageDirectory()
-    {
-        return \Codeception\Configuration::dataDir()
-        . rtrim($this->module->_getConfig('referenceImageDirectory'), DIRECTORY_SEPARATOR)
-        . DIRECTORY_SEPARATOR;
+        . $this->sanitizeFilename(implode('.', $fileNameParts));
     }
 
     /**
@@ -141,12 +141,31 @@ class FileSystem {
             $identifier,
             'png'
         );
-        return $this->getTempDirectory() . implode('.', $fileNameParts);
+        return $this->getTempDirectory() . $this->sanitizeFilename(implode('.', $fileNameParts));
     }
 
-    public function getCurrentWindowSizeString()
+    /**
+     * Get the directory to store temporary files
+     *
+     * @return string
+     */
+    public function getTempDirectory()
     {
-        $windowSize = $this->module->getWebdriver()->webDriver->manage()->window()->getSize();
-        return $windowSize->getWidth() . 'x' . $windowSize->getHeight();
+        return \Codeception\Configuration::outputDir() . 'debug' . DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * @param $name
+     * @return string
+     */
+    public function sanitizeFilename($name)
+    {
+        // remove non alpha numeric characters
+        $name = preg_replace('/[^A-Za-z0-9\.]/', '', $name);
+
+        // capitalize first character of every word convert single spaces to underscrore
+        $name = str_replace(" ", "_", ucwords($name));
+
+        return $name;
     }
 }
