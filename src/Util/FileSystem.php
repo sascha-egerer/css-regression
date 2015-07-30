@@ -42,7 +42,9 @@ class FileSystem {
 
         if (!is_dir(dirname($path))) {
             self::createDirectoryRecursive(dirname($path));
-        } elseif (!is_dir($path)) {
+        }
+
+        if (!is_dir($path)) {
             \Codeception\Util\Debug::debug('Directory "' . $path . '" does not exist. Try to create it ...');
             mkdir($path);
         }
