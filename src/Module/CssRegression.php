@@ -10,7 +10,6 @@ use Codeception\Step;
 use Codeception\TestCase;
 use Codeception\Util\FileSystem;
 use Facebook\WebDriver\Remote\RemoteWebElement;
-use Facebook\WebDriver\WebDriverBy;
 use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSystem;
 
 /**
@@ -166,7 +165,7 @@ class CssRegression extends Module implements DependsOnModule
             $selector = 'body';
         }
 
-        $elements = $this->webDriver->webDriver->findElements(WebDriverBy::cssSelector($selector));
+        $elements = $this->webDriver->_findElements($selector);
 
         if (count($elements) == 0) {
             throw new ElementNotFound($selector);
@@ -215,7 +214,7 @@ class CssRegression extends Module implements DependsOnModule
 
     public function hideElements($selector)
     {
-        $selectedElements = $this->webDriver->webDriver->findElements(WebDriverBy::cssSelector($selector));
+        $selectedElements = $this->webDriver->_findElements($selector);
 
         foreach ($selectedElements as $element) {
             $elementVisibility = $element->getCSSValue('visibility');
@@ -252,7 +251,7 @@ class CssRegression extends Module implements DependsOnModule
 
             $this->hiddenSuiteElements = array();
         } else {
-            $elements = $this->webDriver->webDriver->findElements(WebDriverBy::cssSelector($selector));
+            $elements = $this->webDriver->_findElements($selector);
             foreach ($elements as $element) {
                 if (isset($this->hiddenSuiteElements[$element->getID()])) {
                     $visibility = $this->hiddenSuiteElements[$element->getID()]['visibilityBackup'];
