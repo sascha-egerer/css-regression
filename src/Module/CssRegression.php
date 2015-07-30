@@ -197,7 +197,7 @@ class CssRegression extends Module implements DependsOnModule
             $calculatedDifferenceValue = round($difference * 100, 2);
 
             $this->currentTestCase->getScenario()->comment(
-                'Difference between reference and current image is around ' . $difference . '%'
+                'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'
             );
 
             if ($calculatedDifferenceValue > $this->config['maxDifference']) {
