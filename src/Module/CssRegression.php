@@ -86,7 +86,7 @@ class CssRegression extends Module implements DependsOnModule
 
         $this->moduleFileSystemUtil = new RegressionFileSystem($this);
 
-        if ($this->config['automaticCleanup'] === true) {
+        if ($this->config['automaticCleanup'] === true && is_dir($this->moduleFileSystemUtil->getFailImageDirectory())) {
             // cleanup fail image directory
             FileSystem::doEmptyDir($this->moduleFileSystemUtil->getFailImageDirectory());
         }
@@ -324,7 +324,7 @@ class CssRegression extends Module implements DependsOnModule
         return $this->suitePath;
     }
 
-    public function getWebdriver()
+    public function _getWebdriver()
     {
         return $this->webDriver;
     }
