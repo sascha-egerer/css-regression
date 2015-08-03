@@ -24,7 +24,9 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSyste
  * ## Configuration
  *
  * * maxDifference: 0.1 - the maximum difference between 2 images
- * * automaticCleanup: true - defines if the fail image folder should be cleaned up before a new test run is started
+ * * automaticCleanup: false - defines if the fail image folder should be cleaned up before a new test run is started.
+ *      BE CAREFULL with this option! If you run multiple environments in one command you should not use this option
+ *      as the images will be deleted before each environment test starts.
  * * referenceImageDirectory:  - defines the folder where the reference images should be stored
  * * failImageDirectory:  - defines the folder where the fail images should be stored
  */
@@ -43,7 +45,7 @@ class CssRegression extends Module implements DependsOnModule
     /**
      * @var array
      */
-    protected $config = ['maxDifference' => 0.1, 'automaticCleanup' => true];
+    protected $config = ['maxDifference' => 0.1, 'automaticCleanup' => false];
 
     /**
      * @var string
