@@ -62,7 +62,6 @@ class FileSystem
         $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
-
         return $this->getReferenceImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
         . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
@@ -91,6 +90,21 @@ class FileSystem
     }
 
     /**
+     * @param $name
+     * @return string
+     */
+    public function sanitizeFilename($name)
+    {
+        // remove non alpha numeric characters
+        $name = preg_replace('/[^A-Za-z0-9\.]/', '', $name);
+
+        // capitalize first character of every word convert single spaces to underscrore
+        $name = str_replace(" ", "_", ucwords($name));
+
+        return $name;
+    }
+
+    /**
      * Get path for the fail image with a suffix
      *
      * @param string $identifier test identifier
@@ -103,15 +117,15 @@ class FileSystem
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
         $fileNameParts = array(
-            $this->module->_getModuleInitTime(),
-            $this->getCurrentWindowSizeString(),
-            $identifier,
             $suffix,
+            $identifier,
             'png'
         );
 
         return $this->getFailImageDirectory()
+        . $this->module->_getModuleInitTime() . DIRECTORY_SEPARATOR
         . $testName . DIRECTORY_SEPARATOR
+        . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename(implode('.', $fileNameParts));
     }
 
@@ -152,20 +166,5 @@ class FileSystem
     public function getTempDirectory()
     {
         return \Codeception\Configuration::outputDir() . 'debug' . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * @param $name
-     * @return string
-     */
-    public function sanitizeFilename($name)
-    {
-        // remove non alpha numeric characters
-        $name = preg_replace('/[^A-Za-z0-9\.]/', '', $name);
-
-        // capitalize first character of every word convert single spaces to underscrore
-        $name = str_replace(" ", "_", ucwords($name));
-
-        return $name;
     }
 }

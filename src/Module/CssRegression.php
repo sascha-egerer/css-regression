@@ -25,8 +25,6 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSyste
  *
  * * maxDifference: 0.1 - the maximum difference between 2 images
  * * automaticCleanup: false - defines if the fail image folder should be cleaned up before a new test run is started.
- *      BE CAREFULL with this option! If you run multiple environments in one command you should not use this option
- *      as the images will be deleted before each environment test starts.
  * * referenceImageDirectory:  - defines the folder where the reference images should be stored
  * * failImageDirectory:  - defines the folder where the fail images should be stored
  */
@@ -45,7 +43,7 @@ class CssRegression extends Module implements DependsOnModule
     /**
      * @var array
      */
-    protected $config = ['maxDifference' => 0.1, 'automaticCleanup' => false];
+    protected $config = ['maxDifference' => 0.1, 'automaticCleanup' => true];
 
     /**
      * @var string
@@ -55,7 +53,7 @@ class CssRegression extends Module implements DependsOnModule
     /**
      * @var int Timestamp when the suite was initialized
      */
-    protected $moduleInitTime = 0;
+    protected static $moduleInitTime = 0;
 
     /**
      * @var TestCase
@@ -88,16 +86,18 @@ class CssRegression extends Module implements DependsOnModule
 
         $this->moduleFileSystemUtil = new RegressionFileSystem($this);
 
-        if ($this->config['automaticCleanup'] === true && is_dir($this->moduleFileSystemUtil->getFailImageDirectory())) {
-            // cleanup fail image directory
-            FileSystem::doEmptyDir($this->moduleFileSystemUtil->getFailImageDirectory());
-        }
-
         $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getTempDirectory());
         $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getReferenceImageDirectory());
         $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getFailImageDirectory());
 
-        $this->moduleInitTime = time();
+        if (self::$moduleInitTime === 0) {
+            if ($this->config['automaticCleanup'] === true && is_dir($this->moduleFileSystemUtil->getFailImageDirectory())) {
+                // cleanup fail image directory
+                FileSystem::doEmptyDir($this->moduleFileSystemUtil->getFailImageDirectory());
+            }
+
+            self::$moduleInitTime = time();
+        }
     }
 
     /**
@@ -315,7 +315,7 @@ class CssRegression extends Module implements DependsOnModule
      */
     public function _getModuleInitTime()
     {
-        return $this->moduleInitTime;
+        return self::$moduleInitTime;
     }
 
     /**
