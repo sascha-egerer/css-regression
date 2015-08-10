@@ -57,14 +57,14 @@ class FileSystem
      * @param string $identifier
      * @return string path to the reference image
      */
-    public function getReferenceImagePath($identifier)
+    public function getReferenceImagePath($identifier, $sizeString)
     {
         $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
         return $this->getReferenceImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
-        . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
+        . $sizeString . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename($identifier) . '.png';
     }
 
@@ -83,9 +83,9 @@ class FileSystem
     /**
      * @return string
      */
-    public function getCurrentWindowSizeString()
+    public function getCurrentWindowSizeString(Module\WebDriver $webDriver)
     {
-        $windowSize = $this->module->_getWebdriver()->webDriver->manage()->window()->getSize();
+        $windowSize = $webDriver->webDriver->manage()->window()->getSize();
         return $windowSize->getWidth() . 'x' . $windowSize->getHeight();
     }
 
@@ -111,7 +111,7 @@ class FileSystem
      * @param string $suffix suffix added to the filename
      * @return string path to the fail image
      */
-    public function getFailImagePath($identifier, $suffix = 'fail')
+    public function getFailImagePath($identifier, $sizeString, $suffix = 'fail')
     {
         $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
@@ -123,9 +123,8 @@ class FileSystem
         );
 
         return $this->getFailImageDirectory()
-        . $this->module->_getModuleInitTime() . DIRECTORY_SEPARATOR
         . $testName . DIRECTORY_SEPARATOR
-        . $this->getCurrentWindowSizeString() . DIRECTORY_SEPARATOR
+        . $sizeString . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename(implode('.', $fileNameParts));
     }
 
@@ -138,7 +137,7 @@ class FileSystem
     {
         return \Codeception\Configuration::outputDir()
         . rtrim($this->module->_getConfig('failImageDirectory'), DIRECTORY_SEPARATOR)
-        . DIRECTORY_SEPARATOR;
+        . DIRECTORY_SEPARATOR . $this->module->_getModuleInitTime() . DIRECTORY_SEPARATOR;
     }
 
     /**
@@ -151,7 +150,7 @@ class FileSystem
     {
         $fileNameParts = array(
             $this->module->_getModuleInitTime(),
-            $this->getCurrentWindowSizeString(),
+            $this->getCurrentWindowSizeString($this->module->_getWebdriver()),
             $identifier,
             'png'
         );

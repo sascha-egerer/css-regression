@@ -43,7 +43,7 @@ class CssRegression extends Module implements DependsOnModule
     /**
      * @var array
      */
-    protected $config = ['maxDifference' => 0.1, 'automaticCleanup' => true];
+    protected $config = ['maxDifference' => 0.01, 'automaticCleanup' => true];
 
     /**
      * @var string
@@ -86,18 +86,18 @@ class CssRegression extends Module implements DependsOnModule
 
         $this->moduleFileSystemUtil = new RegressionFileSystem($this);
 
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getTempDirectory());
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getReferenceImageDirectory());
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getFailImageDirectory());
-
         if (self::$moduleInitTime === 0) {
+            self::$moduleInitTime = time();
+
             if ($this->config['automaticCleanup'] === true && is_dir($this->moduleFileSystemUtil->getFailImageDirectory())) {
                 // cleanup fail image directory
                 FileSystem::doEmptyDir($this->moduleFileSystemUtil->getFailImageDirectory());
             }
-
-            self::$moduleInitTime = time();
         }
+
+        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getTempDirectory());
+        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getReferenceImageDirectory());
+        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getFailImageDirectory());
     }
 
     /**
@@ -178,7 +178,11 @@ class CssRegression extends Module implements DependsOnModule
         /** @var RemoteWebElement $element */
         $image = $this->_createScreenshot($referenceImageIdentifier, reset($elements));
 
-        $referenceImagePath = $this->moduleFileSystemUtil->getReferenceImagePath($referenceImageIdentifier);
+        $windowSizeString = $this->moduleFileSystemUtil->getCurrentWindowSizeString($this->webDriver);
+        $referenceImagePath = $this->moduleFileSystemUtil->getReferenceImagePath(
+            $referenceImageIdentifier,
+            $windowSizeString
+        );
         if (!file_exists($referenceImagePath)) {
             // Ensure that the target directory exists
             $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
@@ -195,21 +199,21 @@ class CssRegression extends Module implements DependsOnModule
             list($comparedImage, $difference) = $referenceImage->compareImages($image,
                 \Imagick::METRIC_MEANSQUAREERROR);
 
-            $calculatedDifferenceValue = round($difference * 100, 2);
+            $calculatedDifferenceValue = round((float) substr($difference, 0, 6) * 100, 2);
 
             $this->currentTestCase->getScenario()->comment(
                 'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'
             );
 
             if ($calculatedDifferenceValue > $this->config['maxDifference']) {
-                $failImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, 'diff');
+                $failImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
 
                 $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($failImagePath));
 
-                $image->writeImage($this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, 'fail'));
+                $image->writeImage($this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'fail'));
                 $comparedImage->setImageFormat('png');
                 $comparedImage->writeImage($failImagePath);
-                $this->currentTestCase->fail('Image does not match to the reference image.');
+                $this->fail('Image does not match to the reference image.');
             }
         }
     }
