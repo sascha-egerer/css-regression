@@ -95,8 +95,7 @@ class FileSystem
      */
     public function sanitizeFilename($name)
     {
-        // remove non alpha numeric characters but keep slashes to create subfolders
-        $name = preg_replace('/[^A-Za-z0-9\.\/\_]/', '', $name);
+        $name = preg_replace('/[^A-Za-z0-9\.\_]/', '', $name);
 
         // capitalize first character of every word convert single spaces to underscrore
         $name = str_replace(" ", "_", ucwords($name));
