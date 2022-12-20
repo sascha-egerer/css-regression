@@ -7,6 +7,7 @@ use Codeception\Event\SuiteEvent;
 use Codeception\Events;
 use Codeception\Module\WebDriver;
 use Codeception\PHPUnit\ResultPrinter;
+use Codeception\Util\Template;
 use SaschaEgerer\CodeceptionCssRegression\Module\CssRegression;
 use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
 
@@ -19,7 +20,8 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
  *
  * ``` yaml
  * extensions:
- *      - SaschaEgerer\CodeceptionCssRegression\Extension\CssRegressionReporter
+ *      enabled:
+ *          - SaschaEgerer\CodeceptionCssRegression\Extension\CssRegressionReporter
  * ```
  *
  * #### Configuration
@@ -88,16 +90,18 @@ class CssRegressionReporter extends \Codeception\Extension
     {
         if (count($this->failedIdentifiers) > 0) {
             $items = '';
-            $itemTemplate = new \Text_Template($this->config['templateFolder'] . 'Item.html');
+            $itemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Item.html'));
             foreach ($this->failedIdentifiers as $vars) {
-                $itemTemplate->setVar($vars);
-                $items .= $itemTemplate->render();
+                $itemTemplate->setVars($vars);
+                $items .= $itemTemplate->produce();
             }
 
-            $pageTemplate = new \Text_Template($this->config['templateFolder'] . 'Page.html');
-            $pageTemplate->setVar(array('items' => $items));
+            $pageTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Page.html'));
+            $pageTemplate->setVars(array('items' => $items));
             $reportPath = $this->fileSystemUtil->getFailImageDirectory() . 'index.html';
-            $pageTemplate->renderTo($reportPath);
+
+            file_put_contents($reportPath, $pageTemplate->produce());
+
             $printResultEvent->getPrinter()->write('Report has been created: ' . $reportPath . "\n");
         }
     }
