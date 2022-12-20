@@ -90,10 +90,12 @@ class CssRegressionReporter extends \Codeception\Extension
     {
         if (count($this->failedIdentifiers) > 0) {
             $items = '';
-            $itemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Item.html'));
+            $failItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'FailItem.html'));
+            $newItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'NewItem.html'));
             foreach ($this->failedIdentifiers as $vars) {
-                $itemTemplate->setVars($vars);
-                $items .= $itemTemplate->produce();
+                $template = $vars['failImage'] === '' ? $newItemTemplate : $failItemTemplate;
+                $template->setVars($vars);
+                $items .= $template->produce();
             }
 
             $pageTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Page.html'));
@@ -111,17 +113,20 @@ class CssRegressionReporter extends \Codeception\Extension
      */
     public function stepAfter(StepEvent $stepEvent)
     {
-        if ($stepEvent->getStep()->hasFailed() && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
+        if ($stepEvent->getStep()->hasFailed()  && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
             /** @var WebDriver $stepWebDriver */
             $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
             $identifier = $stepEvent->getStep()->getArguments()[0];
             $windowSize = $this->fileSystemUtil->getCurrentWindowSizeString($stepWebDriver);
 
+            $failImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail');
+            $diffImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'diff');
+
             $this->failedIdentifiers[] = array(
                 'identifier' => $identifier,
                 'windowSize' => $windowSize,
-                'failImage' => base64_encode(file_get_contents($this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail'))),
-                'diffImage' => base64_encode(file_get_contents($this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'diff'))),
+                'failImage' => (file_exists($failImage)) ? base64_encode(file_get_contents($failImage)) : '',
+                'diffImage' => (file_exists($diffImage)) ? base64_encode(file_get_contents($diffImage)) : '',
                 'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $windowSize)))
             );
         }

@@ -187,8 +187,7 @@ class CssRegression extends Module implements DependsOnModule
             // Ensure that the target directory exists
             $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
             copy($image->getImageFilename(), $referenceImagePath);
-            $this->markTestIncomplete('Reference Image does not exist.
-                Test is skipeed but will now copy reference image to target directory...');
+            $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
             $referenceImage = new \Imagick($referenceImagePath);
 
@@ -203,14 +202,17 @@ class CssRegression extends Module implements DependsOnModule
             );
 
             if ($calculatedDifferenceValue > $this->config['maxDifference']) {
-                $failImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
+                $diffImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
 
-                $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($failImagePath));
+                $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($diffImagePath));
 
                 $image->writeImage($this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'fail'));
                 $comparedImage->setImageFormat('png');
-                $comparedImage->writeImage($failImagePath);
+                $comparedImage->writeImage($diffImagePath);
                 $this->fail('Image does not match to the reference image.');
+            } else {
+                // do an assertion to get correct assertion count
+                $this->assertTrue(true);
             }
         }
     }
