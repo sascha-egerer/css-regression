@@ -7,6 +7,7 @@ use Codeception\Event\SuiteEvent;
 use Codeception\Events;
 use Codeception\Module\WebDriver;
 use Codeception\PHPUnit\ResultPrinter;
+use Codeception\Util\Template;
 use SaschaEgerer\CodeceptionCssRegression\Module\CssRegression;
 use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
 
@@ -19,7 +20,8 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
  *
  * ``` yaml
  * extensions:
- *      - SaschaEgerer\CodeceptionCssRegression\Extension\CssRegressionReporter
+ *      enabled:
+ *          - SaschaEgerer\CodeceptionCssRegression\Extension\CssRegressionReporter
  * ```
  *
  * #### Configuration
@@ -88,16 +90,20 @@ class CssRegressionReporter extends \Codeception\Extension
     {
         if (count($this->failedIdentifiers) > 0) {
             $items = '';
-            $itemTemplate = new \Text_Template($this->config['templateFolder'] . 'Item.html');
+            $failItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'FailItem.html'));
+            $newItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'NewItem.html'));
             foreach ($this->failedIdentifiers as $vars) {
-                $itemTemplate->setVar($vars);
-                $items .= $itemTemplate->render();
+                $template = $vars['failImage'] === '' ? $newItemTemplate : $failItemTemplate;
+                $template->setVars($vars);
+                $items .= $template->produce();
             }
 
-            $pageTemplate = new \Text_Template($this->config['templateFolder'] . 'Page.html');
-            $pageTemplate->setVar(array('items' => $items));
+            $pageTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Page.html'));
+            $pageTemplate->setVars(array('items' => $items));
             $reportPath = $this->fileSystemUtil->getFailImageDirectory() . 'index.html';
-            $pageTemplate->renderTo($reportPath);
+
+            file_put_contents($reportPath, $pageTemplate->produce());
+
             $printResultEvent->getPrinter()->write('Report has been created: ' . $reportPath . "\n");
         }
     }
@@ -107,17 +113,20 @@ class CssRegressionReporter extends \Codeception\Extension
      */
     public function stepAfter(StepEvent $stepEvent)
     {
-        if ($stepEvent->getStep()->hasFailed() && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
+        if ($stepEvent->getStep()->hasFailed()  && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
             /** @var WebDriver $stepWebDriver */
             $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
             $identifier = $stepEvent->getStep()->getArguments()[0];
             $windowSize = $this->fileSystemUtil->getCurrentWindowSizeString($stepWebDriver);
 
+            $failImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail');
+            $diffImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'diff');
+
             $this->failedIdentifiers[] = array(
                 'identifier' => $identifier,
                 'windowSize' => $windowSize,
-                'failImage' => base64_encode(file_get_contents($this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail'))),
-                'diffImage' => base64_encode(file_get_contents($this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'diff'))),
+                'failImage' => (file_exists($failImage)) ? base64_encode(file_get_contents($failImage)) : '',
+                'diffImage' => (file_exists($diffImage)) ? base64_encode(file_get_contents($diffImage)) : '',
                 'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $windowSize)))
             );
         }

@@ -89,9 +89,9 @@ class CssRegression extends Module implements DependsOnModule
         if (self::$moduleInitTime === 0) {
             self::$moduleInitTime = time();
 
-            if ($this->config['automaticCleanup'] === true && is_dir($this->moduleFileSystemUtil->getFailImageDirectory())) {
+            if ($this->config['automaticCleanup'] === true && is_dir(dirname($this->moduleFileSystemUtil->getFailImageDirectory()))) {
                 // cleanup fail image directory
-                FileSystem::doEmptyDir($this->moduleFileSystemUtil->getFailImageDirectory());
+                FileSystem::doEmptyDir(dirname($this->moduleFileSystemUtil->getFailImageDirectory()));
             }
         }
 
@@ -187,11 +187,7 @@ class CssRegression extends Module implements DependsOnModule
             // Ensure that the target directory exists
             $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
             copy($image->getImageFilename(), $referenceImagePath);
-
-            $this->currentTestCase->markTestIncomplete(
-                'Reference Image does not exist.
-                Test is skipeed but will now copy reference image to target directory...'
-            );
+            $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
             $referenceImage = new \Imagick($referenceImagePath);
 
@@ -201,19 +197,22 @@ class CssRegression extends Module implements DependsOnModule
 
             $calculatedDifferenceValue = round((float) substr($difference, 0, 6) * 100, 2);
 
-            $this->currentTestCase->getScenario()->comment(
+            $this->_getCurrentTestCase()->getScenario()->comment(
                 'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'
             );
 
             if ($calculatedDifferenceValue > $this->config['maxDifference']) {
-                $failImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
+                $diffImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
 
-                $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($failImagePath));
+                $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($diffImagePath));
 
                 $image->writeImage($this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'fail'));
                 $comparedImage->setImageFormat('png');
-                $comparedImage->writeImage($failImagePath);
+                $comparedImage->writeImage($diffImagePath);
                 $this->fail('Image does not match to the reference image.');
+            } else {
+                // do an assertion to get correct assertion count
+                $this->assertTrue(true);
             }
         }
     }

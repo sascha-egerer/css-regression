@@ -59,7 +59,7 @@ class FileSystem
      */
     public function getReferenceImagePath($identifier, $sizeString)
     {
-        $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
+        $testFilename = $this->module->_getCurrentTestCase()->getMetadata()->getFilename();
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
         return $this->getReferenceImageDirectory()
@@ -95,8 +95,7 @@ class FileSystem
      */
     public function sanitizeFilename($name)
     {
-        // remove non alpha numeric characters
-        $name = preg_replace('/[^A-Za-z0-9\.]/', '', $name);
+        $name = preg_replace('/[^A-Za-z0-9\.\_]/', '', $name);
 
         // capitalize first character of every word convert single spaces to underscrore
         $name = str_replace(" ", "_", ucwords($name));
@@ -113,7 +112,7 @@ class FileSystem
      */
     public function getFailImagePath($identifier, $sizeString, $suffix = 'fail')
     {
-        $testFilename = $this->module->_getCurrentTestCase()->getTestFileName($this->module->_getCurrentTestCase());
+        $testFilename = $this->module->_getCurrentTestCase()->getMetadata()->getFilename();
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
         $fileNameParts = array(
