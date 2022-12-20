@@ -77,8 +77,12 @@ class CssRegressionReporter extends \Codeception\Extension
      */
     public function suiteInit(SuiteEvent $suiteEvent)
     {
+        if(!$this->hasModule($this->getRequiredModuleName())) {
+            return;
+        }
+
         /** @var CssRegression $cssRegressionModule */
-        $cssRegressionModule = $this->getModule('\\SaschaEgerer\\CodeceptionCssRegression\\Module\\CssRegression');
+        $cssRegressionModule = $this->getModule($this->getRequiredModuleName());
         $this->fileSystemUtil = new FileSystem($cssRegressionModule);
     }
 
@@ -88,6 +92,9 @@ class CssRegressionReporter extends \Codeception\Extension
      */
     public function resultPrintAfter(PrintResultEvent $printResultEvent)
     {
+        if(!$this->hasModule($this->getRequiredModuleName())) {
+            return;
+        }
         if (count($this->failedIdentifiers) > 0) {
             $items = '';
             $failItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'FailItem.html'));
@@ -104,7 +111,9 @@ class CssRegressionReporter extends \Codeception\Extension
 
             file_put_contents($reportPath, $pageTemplate->produce());
 
-            $printResultEvent->getPrinter()->write('Report has been created: ' . $reportPath . "\n");
+            $printResultEvent->getPrinter()->write("\n");
+            $printResultEvent->getPrinter()->write('❗Report has been created: ' . $reportPath . "❗\n");
+            $printResultEvent->getPrinter()->write("\n");
         }
     }
 
@@ -113,6 +122,9 @@ class CssRegressionReporter extends \Codeception\Extension
      */
     public function stepAfter(StepEvent $stepEvent)
     {
+        if(!$this->hasModule($this->getRequiredModuleName())) {
+            return;
+        }
         if ($stepEvent->getStep()->hasFailed()  && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
             /** @var WebDriver $stepWebDriver */
             $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
@@ -130,5 +142,10 @@ class CssRegressionReporter extends \Codeception\Extension
                 'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $windowSize)))
             );
         }
+    }
+
+    private function getRequiredModuleName(): string
+    {
+        return '\\' . \SaschaEgerer\CodeceptionCssRegression\Module\CssRegression::class;
     }
 }
