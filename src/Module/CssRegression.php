@@ -159,9 +159,10 @@ class CssRegression extends Module implements DependsOnModule
      *
      * @param string $referenceImageIdentifier
      * @param null|string $selector
+     * @param null|float $maxDifference
      * @throws ModuleException
      */
-    public function seeNoDifferenceToReferenceImage($referenceImageIdentifier, $selector = null)
+    public function seeNoDifferenceToReferenceImage($referenceImageIdentifier, $selector = null, $maxDifference = null)
     {
         if ($selector === null) {
             $selector = 'body';
@@ -201,7 +202,8 @@ class CssRegression extends Module implements DependsOnModule
                 'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'
             );
 
-            if ($calculatedDifferenceValue > $this->config['maxDifference']) {
+            $maxDifference ??= $this->config['maxDifference'];
+            if ($calculatedDifferenceValue > $maxDifference) {
                 $diffImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
 
                 $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($diffImagePath));

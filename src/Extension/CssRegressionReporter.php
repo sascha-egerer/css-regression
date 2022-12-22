@@ -119,7 +119,7 @@ class CssRegressionReporter extends \Codeception\Extension
             symlink(basename($this->fileSystemUtil->getFailImageDirectory()), $latestLinkPath);
 
             $printResultEvent->getPrinter()->write("\n");
-            $printResultEvent->getPrinter()->write('❗Report has been created: ' . $reportPath . "❗\n");
+            $printResultEvent->getPrinter()->write('❗Report has been created: ' . $latestLinkPath . "/index.html ❗\n");
             $printResultEvent->getPrinter()->write("\n");
         }
     }
