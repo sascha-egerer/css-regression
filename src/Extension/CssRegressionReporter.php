@@ -112,7 +112,10 @@ class CssRegressionReporter extends \Codeception\Extension
             file_put_contents($reportPath, $pageTemplate->produce());
 
             $latestLinkPath = dirname($this->fileSystemUtil->getFailImageDirectory()) . '/latest';
-            unlink($latestLinkPath);
+            if (is_link($latestLinkPath)) {
+                @unlink($latestLinkPath);
+            }
+
             symlink(basename($this->fileSystemUtil->getFailImageDirectory()), $latestLinkPath);
 
             $printResultEvent->getPrinter()->write("\n");
