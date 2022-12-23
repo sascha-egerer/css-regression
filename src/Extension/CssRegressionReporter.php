@@ -132,10 +132,10 @@ class CssRegressionReporter extends \Codeception\Extension
         if(!$this->hasModule($this->getRequiredModuleName())) {
             return;
         }
-        if ($stepEvent->getStep()->hasFailed()  && $stepEvent->getStep()->getAction('seeNoDifferenceToReferenceImage')) {
+        if ($stepEvent->getStep()->hasFailed() && $stepEvent->getStep()->getAction() === 'seeNoDifferenceToReferenceImage') {
             /** @var WebDriver $stepWebDriver */
             $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
-            $identifier = $stepEvent->getStep()->getArguments()[0];
+            $identifier = $stepEvent->getStep()->getArguments()[0] ?? '';
             $windowSize = $this->fileSystemUtil->getCurrentWindowSizeString($stepWebDriver);
 
             $failImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail');

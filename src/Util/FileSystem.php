@@ -85,8 +85,7 @@ class FileSystem
      */
     public function getCurrentWindowSizeString(Module\WebDriver $webDriver)
     {
-        $windowSize = $webDriver->webDriver->manage()->window()->getSize();
-        return $windowSize->getWidth() . 'x' . $windowSize->getHeight();
+        return $webDriver->webDriver->executeScript('return window.innerWidth') . 'x' . $webDriver->webDriver->executeScript('return window.innerHeight');
     }
 
     /**
