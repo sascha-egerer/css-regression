@@ -136,6 +136,7 @@ class CssRegressionReporter extends \Codeception\Extension
             /** @var WebDriver $stepWebDriver */
             $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
             $identifier = $stepEvent->getStep()->getArguments()[0] ?? '';
+            $referenceImagePath = $stepEvent->getStep()->getArguments()[3] ?? '';
             $windowSize = $this->fileSystemUtil->getCurrentWindowSizeString($stepWebDriver);
 
             $failImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail');
@@ -146,7 +147,7 @@ class CssRegressionReporter extends \Codeception\Extension
                 'windowSize' => $windowSize,
                 'failImage' => (file_exists($failImage)) ? base64_encode(file_get_contents($failImage)) : '',
                 'diffImage' => (file_exists($diffImage)) ? base64_encode(file_get_contents($diffImage)) : '',
-                'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $windowSize)))
+                'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $referenceImagePath)))
             );
         }
     }

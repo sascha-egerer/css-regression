@@ -1,4 +1,5 @@
 <?php
+
 namespace SaschaEgerer\CodeceptionCssRegression\Module;
 
 use Codeception\Exception\ElementNotFound;
@@ -160,10 +161,15 @@ class CssRegression extends Module implements DependsOnModule
      * @param string $referenceImageIdentifier
      * @param null|string $selector
      * @param null|float $maxDifference
+     * @param null|string $referenceImagePath
      * @throws ModuleException
      */
-    public function seeNoDifferenceToReferenceImage($referenceImageIdentifier, $selector = null, $maxDifference = null)
-    {
+    public function seeNoDifferenceToReferenceImage(
+        string $referenceImageIdentifier,
+        string $selector = null,
+        float $maxDifference = null,
+        string $referenceImagePath = null
+    ) {
         if ($selector === null) {
             $selector = 'body';
         }
@@ -182,8 +188,9 @@ class CssRegression extends Module implements DependsOnModule
         $windowSizeString = $this->moduleFileSystemUtil->getCurrentWindowSizeString($this->webDriver);
         $referenceImagePath = $this->moduleFileSystemUtil->getReferenceImagePath(
             $referenceImageIdentifier,
-            $windowSizeString
+            $referenceImagePath
         );
+
         if (!file_exists($referenceImagePath)) {
             // Ensure that the target directory exists
             $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
@@ -196,7 +203,7 @@ class CssRegression extends Module implements DependsOnModule
             list($comparedImage, $difference) = $referenceImage->compareImages($image,
                 \Imagick::METRIC_MEANSQUAREERROR);
 
-            $calculatedDifferenceValue = round((float) substr($difference, 0, 6) * 100, 2);
+            $calculatedDifferenceValue = round((float)substr($difference, 0, 6) * 100, 2);
 
             $this->_getCurrentTestCase()->getScenario()->comment(
                 'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'

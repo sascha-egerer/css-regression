@@ -57,14 +57,14 @@ class FileSystem
      * @param string $identifier
      * @return string path to the reference image
      */
-    public function getReferenceImagePath($identifier, $sizeString)
+    public function getReferenceImagePath($identifier, $path)
     {
         $testFilename = $this->module->_getCurrentTestCase()->getMetadata()->getFilename();
         $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
 
         return $this->getReferenceImageDirectory()
         . $testName . DIRECTORY_SEPARATOR
-        . $sizeString . DIRECTORY_SEPARATOR
+        . $path . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename($identifier) . '.png';
     }
 
