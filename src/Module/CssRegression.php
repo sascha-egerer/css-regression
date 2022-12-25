@@ -156,8 +156,6 @@ class CssRegression extends Module implements DependsOnModule
     }
 
     /**
-     * Checks item in Memcached exists and the same as expected.
-     *
      * @param string $referenceImageIdentifier
      * @param null|string $selector
      * @param null|float $maxDifference
@@ -183,7 +181,7 @@ class CssRegression extends Module implements DependsOnModule
                 'Multiple elements found for given selector "' . $selector . '" but need exactly one element!');
         }
         /** @var RemoteWebElement $element */
-        $image = $this->_createScreenshot($referenceImageIdentifier, reset($elements));
+        $image = $this->_createScreenshot($referenceImagePath . $referenceImageIdentifier, reset($elements));
 
         $windowSizeString = $this->moduleFileSystemUtil->getCurrentWindowSizeString($this->webDriver);
         $referenceImagePath = $this->moduleFileSystemUtil->getReferenceImagePath(

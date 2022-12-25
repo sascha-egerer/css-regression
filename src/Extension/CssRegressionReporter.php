@@ -26,7 +26,7 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
  *
  * #### Configuration
  *
- * * `templateFolder` Path to the template folder that is used to generate the report. Must contain a Page.html and Item.html file.
+ * * `templateFolder` Path to the template folder that is used to generate the report. Must contain a Page.html, FailItemNewl and FailItem.html file.
  *
  * ``` yaml
  * extensions:
@@ -144,6 +144,7 @@ class CssRegressionReporter extends \Codeception\Extension
 
             $this->failedIdentifiers[] = array(
                 'identifier' => $identifier,
+                'referenceImagePath' => $referenceImagePath,
                 'windowSize' => $windowSize,
                 'failImage' => (file_exists($failImage)) ? base64_encode(file_get_contents($failImage)) : '',
                 'diffImage' => (file_exists($diffImage)) ? base64_encode(file_get_contents($diffImage)) : '',
