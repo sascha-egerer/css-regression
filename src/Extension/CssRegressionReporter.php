@@ -1,4 +1,5 @@
 <?php
+
 namespace SaschaEgerer\CodeceptionCssRegression\Extension;
 
 use Codeception\Event\PrintResultEvent;
@@ -36,7 +37,7 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem;
  * ```
  *
  */
-class CssRegressionReporter extends \Codeception\Extension
+final class CssRegressionReporter extends \Codeception\Extension
 {
     static $events = [
         Events::RESULT_PRINT_AFTER => 'resultPrintAfter',
@@ -44,12 +45,9 @@ class CssRegressionReporter extends \Codeception\Extension
         Events::SUITE_BEFORE => 'suiteInit'
     ];
 
-    protected $failedIdentifiers = [];
+    private array $failedIdentifiers = [];
 
-    /**
-     * @var FileSystem
-     */
-    protected $fileSystemUtil;
+    private ?\SaschaEgerer\CodeceptionCssRegression\Util\FileSystem $fileSystem = null;
 
     protected $config = [
         'templateFolder' => null
@@ -65,58 +63,57 @@ class CssRegressionReporter extends \Codeception\Extension
             $this->config['templateFolder'] = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Templates';
         }
 
-        $this->config['templateFolder'] = rtrim($this->config['templateFolder'],
+        $this->config['templateFolder'] = rtrim((string)$this->config['templateFolder'],
                 DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
         parent::__construct($config, $options);
     }
 
     /**
-     * @param SuiteEvent $suiteEvent
      * @throws \Codeception\Exception\ModuleRequireException
      */
-    public function suiteInit(SuiteEvent $suiteEvent)
+    public function suiteInit(SuiteEvent $suiteEvent): void
     {
-        if(!$this->hasModule($this->getRequiredModuleName())) {
+        if (!$this->hasModule($this->getRequiredModuleName())) {
             return;
         }
 
         /** @var CssRegression $cssRegressionModule */
         $cssRegressionModule = $this->getModule($this->getRequiredModuleName());
-        $this->fileSystemUtil = new FileSystem($cssRegressionModule);
+        $this->fileSystem = new FileSystem($cssRegressionModule);
     }
 
     /**
-     * @param PrintResultEvent $printResultEvent
      * @throws \Codeception\Exception\ModuleRequireException
      */
-    public function resultPrintAfter(PrintResultEvent $printResultEvent)
+    public function resultPrintAfter(PrintResultEvent $printResultEvent): void
     {
-        if(!$this->hasModule($this->getRequiredModuleName())) {
+        if (!$this->hasModule($this->getRequiredModuleName())) {
             return;
         }
-        if (count($this->failedIdentifiers) > 0) {
+
+        if ($this->failedIdentifiers !== []) {
             $items = '';
             $failItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'FailItem.html'));
             $newItemTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'NewItem.html'));
-            foreach ($this->failedIdentifiers as $vars) {
-                $template = $vars['failImage'] === '' ? $newItemTemplate : $failItemTemplate;
-                $template->setVars($vars);
+            foreach ($this->failedIdentifiers as $failedIdentifier) {
+                $template = $failedIdentifier['failImage'] === '' ? $newItemTemplate : $failItemTemplate;
+                $template->setVars($failedIdentifier);
                 $items .= $template->produce();
             }
 
             $pageTemplate = new Template(file_get_contents($this->config['templateFolder'] . 'Page.html'));
-            $pageTemplate->setVars(array('items' => $items));
-            $reportPath = $this->fileSystemUtil->getFailImageDirectory() . 'index.html';
+            $pageTemplate->setVars(['items' => $items]);
+            $reportPath = $this->fileSystem->getFailImageDirectory() . 'index.html';
 
             file_put_contents($reportPath, $pageTemplate->produce());
 
-            $latestLinkPath = dirname($this->fileSystemUtil->getFailImageDirectory()) . '/latest';
+            $latestLinkPath = dirname($this->fileSystem->getFailImageDirectory()) . '/latest';
             if (is_link($latestLinkPath)) {
                 @unlink($latestLinkPath);
             }
 
-            symlink(basename($this->fileSystemUtil->getFailImageDirectory()), $latestLinkPath);
+            symlink(basename($this->fileSystem->getFailImageDirectory()), $latestLinkPath);
 
             $printResultEvent->getPrinter()->write("\n");
             $printResultEvent->getPrinter()->write('❗Report has been created: ' . $latestLinkPath . "/index.html ❗\n");
@@ -124,33 +121,41 @@ class CssRegressionReporter extends \Codeception\Extension
         }
     }
 
-    /**
-     * @param StepEvent $stepEvent
-     */
-    public function stepAfter(StepEvent $stepEvent)
+    public function stepAfter(StepEvent $stepEvent): void
     {
-        if(!$this->hasModule($this->getRequiredModuleName())) {
+        if (!$this->hasModule($this->getRequiredModuleName())) {
             return;
         }
+
         if ($stepEvent->getStep()->hasFailed() && $stepEvent->getStep()->getAction() === 'seeNoDifferenceToReferenceImage') {
             /** @var WebDriver $stepWebDriver */
-            $stepWebDriver = $stepEvent->getTest()->getScenario()->current('modules')['WebDriver'];
+            $stepWebDriver = $this->getModule('WebDriver');
             $identifier = $stepEvent->getStep()->getArguments()[0] ?? '';
             $referenceImagePath = $stepEvent->getStep()->getArguments()[3] ?? '';
-            $windowSize = $this->fileSystemUtil->getCurrentWindowSizeString($stepWebDriver);
 
-            $failImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'fail');
-            $diffImage = $this->fileSystemUtil->getFailImagePath($identifier, $windowSize, 'diff');
+            $failImage = $this->fileSystem->getFailImagePath($identifier, $referenceImagePath, 'fail');
+            $diffImage = $this->fileSystem->getFailImagePath($identifier, $referenceImagePath, 'diff');
 
-            $this->failedIdentifiers[] = array(
+            $this->failedIdentifiers[] = [
                 'identifier' => $identifier,
                 'referenceImagePath' => $referenceImagePath,
-                'windowSize' => $windowSize,
-                'failImage' => (file_exists($failImage)) ? base64_encode(file_get_contents($failImage)) : '',
-                'diffImage' => (file_exists($diffImage)) ? base64_encode(file_get_contents($diffImage)) : '',
-                'referenceImage' => base64_encode(file_get_contents($this->fileSystemUtil->getReferenceImagePath($identifier, $referenceImagePath)))
-            );
+                'windowSize' => $this->fileSystem->getCurrentWindowSizeString($stepWebDriver),
+                'failImage' => $this->getImageAsBase64($failImage),
+                'diffImage' => $this->getImageAsBase64($diffImage),
+                'referenceImage' => $this->getImageAsBase64(
+                    $this->fileSystem->getReferenceImagePath($identifier, $referenceImagePath)
+                )
+            ];
         }
+    }
+
+    private function getImageAsBase64(string $imagePath): string
+    {
+        if (!file_exists($imagePath)) {
+            return '';
+        }
+
+        return base64_encode(file_get_contents($imagePath));
     }
 
     private function getRequiredModuleName(): string

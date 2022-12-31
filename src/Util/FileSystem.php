@@ -7,20 +7,11 @@ use SaschaEgerer\CodeceptionCssRegression\Module\CssRegression;
 /**
  * Provide some methods for filesystem related actions
  */
-class FileSystem
+final class FileSystem
 {
 
-    /**
-     * @var CssRegression
-     */
-    protected $module;
-
-    /**
-     * @param CssRegression $module
-     */
-    public function __construct(CssRegression $module)
+    public function __construct(private readonly CssRegression $cssRegression)
     {
-        $this->module = $module;
     }
 
     /**
@@ -31,9 +22,9 @@ class FileSystem
     public function createDirectoryRecursive($path)
     {
         // @todo UNIX ONLY?
-        if (substr($path, 0, 1) !== '/') {
+        if (!str_starts_with((string) $path, '/')) {
             $path = \Codeception\Configuration::projectDir() . $path;
-        } elseif (!strstr($path, \Codeception\Configuration::projectDir())) {
+        } elseif (!strstr((string) $path, \Codeception\Configuration::projectDir())) {
             throw new \InvalidArgumentException(
                 'Can\'t create directroy "' . $path
                 . '" as it is outside of the project root "'
@@ -41,8 +32,8 @@ class FileSystem
             );
         }
 
-        if (!is_dir(dirname($path))) {
-            self::createDirectoryRecursive(dirname($path));
+        if (!is_dir(dirname((string) $path))) {
+            self::createDirectoryRecursive(dirname((string) $path));
         }
 
         if (!is_dir($path)) {
@@ -59,11 +50,7 @@ class FileSystem
      */
     public function getReferenceImagePath($identifier, $path)
     {
-        $testFilename = $this->module->_getCurrentTestCase()->getMetadata()->getFilename();
-        $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
-
         return $this->getReferenceImageDirectory()
-        . $testName . DIRECTORY_SEPARATOR
         . $path . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename($identifier) . '.png';
     }
@@ -76,7 +63,7 @@ class FileSystem
     public function getReferenceImageDirectory()
     {
         return \Codeception\Configuration::dataDir()
-        . rtrim($this->module->_getConfig('referenceImageDirectory'), DIRECTORY_SEPARATOR)
+        . rtrim((string) $this->cssRegression->_getConfig('referenceImageDirectory'), DIRECTORY_SEPARATOR)
         . DIRECTORY_SEPARATOR;
     }
 
@@ -94,7 +81,7 @@ class FileSystem
      */
     public function sanitizeFilename($name)
     {
-        $name = preg_replace('/[^A-Za-z0-9\.\_]/', '', $name);
+        $name = preg_replace('#[^A-Za-z0-9\.\_]#', '', (string) $name);
 
         // capitalize first character of every word convert single spaces to underscrore
         $name = str_replace(" ", "_", ucwords($name));
@@ -109,58 +96,29 @@ class FileSystem
      * @param string $suffix suffix added to the filename
      * @return string path to the fail image
      */
-    public function getFailImagePath($identifier, $sizeString, $suffix = 'fail')
+    public function getFailImagePath($identifier, $path, $suffix = 'fail'): string
     {
-        $testFilename = $this->module->_getCurrentTestCase()->getMetadata()->getFilename();
-        $testName = pathinfo(str_replace($this->module->_getSuitePath(), '', $testFilename), PATHINFO_FILENAME);
-
-        $fileNameParts = array(
-            $suffix,
-            $identifier,
-            'png'
-        );
+        $fileNameParts = [$suffix, $identifier, 'png'];
 
         return $this->getFailImageDirectory()
-        . $testName . DIRECTORY_SEPARATOR
-        . $sizeString . DIRECTORY_SEPARATOR
+        . $path . DIRECTORY_SEPARATOR
         . $this->sanitizeFilename(implode('.', $fileNameParts));
     }
 
     /**
      * Get directory where fail images are stored
-     *
-     * @return string
      */
-    public function getFailImageDirectory()
+    public function getFailImageDirectory(): string
     {
         return \Codeception\Configuration::outputDir()
-        . rtrim($this->module->_getConfig('failImageDirectory'), DIRECTORY_SEPARATOR)
-        . DIRECTORY_SEPARATOR . $this->module->_getModuleInitTime() . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Get path to the temp image for the given identifier
-     *
-     * @param string $identifier identifier for the test
-     * @return string Path to the temp image
-     */
-    public function getTempImagePath($identifier)
-    {
-        $fileNameParts = array(
-            $this->module->_getModuleInitTime(),
-            $this->getCurrentWindowSizeString($this->module->_getWebdriver()),
-            $identifier,
-            'png'
-        );
-        return $this->getTempDirectory() . $this->sanitizeFilename(implode('.', $fileNameParts));
+        . rtrim((string) $this->cssRegression->_getConfig('failImageDirectory'), DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR . $this->cssRegression->getModuleInitTime() . DIRECTORY_SEPARATOR;
     }
 
     /**
      * Get the directory to store temporary files
-     *
-     * @return string
      */
-    public function getTempDirectory()
+    public function getTempDirectory(): string
     {
         return \Codeception\Configuration::outputDir() . 'debug' . DIRECTORY_SEPARATOR;
     }

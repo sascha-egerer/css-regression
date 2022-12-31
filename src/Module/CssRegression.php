@@ -2,15 +2,17 @@
 
 namespace SaschaEgerer\CodeceptionCssRegression\Module;
 
-use Codeception\Exception\ElementNotFound;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Interfaces\DependsOnModule;
+use Codeception\Lib\Interfaces\ElementLocator;
+use Codeception\Lib\Interfaces\ScreenshotSaver;
 use Codeception\Module;
 use Codeception\Module\WebDriver;
 use Codeception\Step;
-use Codeception\TestCase;
 use Codeception\Util\FileSystem;
+use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\RemoteWebElement;
+use Facebook\WebDriver\WebDriverBy;
 use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSystem;
 
 /**
@@ -29,86 +31,85 @@ use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSyste
  * * referenceImageDirectory:  - defines the folder where the reference images should be stored
  * * failImageDirectory:  - defines the folder where the fail images should be stored
  */
-class CssRegression extends Module implements DependsOnModule
+final class CssRegression extends Module implements DependsOnModule
 {
     /**
-     * @var WebDriver
+     * @var array{maxDifference: float, automaticCleanup: bool, module: string}
      */
-    protected $webDriver = null;
+    protected $config = [
+        'maxDifference' => 0.01,
+        'automaticCleanup' => true,
+        'module' => 'WebDriver',
+    ];
+
+    private ScreenshotSaver|RemoteWebDriver|ElementLocator $webDriver;
 
     /**
      * @var array
      */
-    protected $requiredFields = ['referenceImageDirectory', 'failImageDirectory'];
-
-    /**
-     * @var array
-     */
-    protected $config = ['maxDifference' => 0.01, 'automaticCleanup' => true];
-
-    /**
-     * @var string
-     */
-    protected $suitePath = '';
+    protected $requiredFields = [
+        'referenceImageDirectory',
+        'failImageDirectory'
+    ];
 
     /**
      * @var int Timestamp when the suite was initialized
      */
-    protected static $moduleInitTime = 0;
+    public static int $moduleInitTime = 0;
 
-    /**
-     * @var TestCase
-     */
-    protected $currentTestCase;
-
-    /**
-     * @var RegressionFileSystem
-     */
-    protected $moduleFileSystemUtil;
+    private ?RegressionFileSystem $regressionFileSystem = null;
 
     /**
      * Elements that have been hidden for the current suite
-     *
-     * @var array
      */
-    protected $hiddenSuiteElements;
+    private array $hiddenSuiteElements = [];
 
     /**
      * Initialize the module after configuration has been loaded
      */
     public function _initialize()
     {
-        if (!class_exists('\\Imagick')) {
-            throw new ModuleException(__CLASS__,
+        if (!class_exists(\Imagick::class)) {
+            throw new ModuleException(self::class,
                 'Required class \\Imagick could not be found!
                 Please install the PHP Image Magick extension to use this module.'
             );
         }
 
-        $this->moduleFileSystemUtil = new RegressionFileSystem($this);
+        $this->regressionFileSystem = new RegressionFileSystem($this);
 
         if (self::$moduleInitTime === 0) {
             self::$moduleInitTime = time();
 
-            if ($this->config['automaticCleanup'] === true && is_dir(dirname($this->moduleFileSystemUtil->getFailImageDirectory()))) {
+            if ($this->config['automaticCleanup'] && is_dir(dirname($this->regressionFileSystem->getFailImageDirectory()))) {
                 // cleanup fail image directory
-                FileSystem::doEmptyDir(dirname($this->moduleFileSystemUtil->getFailImageDirectory()));
+                FileSystem::doEmptyDir(dirname($this->regressionFileSystem->getFailImageDirectory()));
             }
         }
 
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getTempDirectory());
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getReferenceImageDirectory());
-        $this->moduleFileSystemUtil->createDirectoryRecursive($this->moduleFileSystemUtil->getFailImageDirectory());
+        $this->regressionFileSystem->createDirectoryRecursive($this->regressionFileSystem->getTempDirectory());
+        $this->regressionFileSystem->createDirectoryRecursive($this->regressionFileSystem->getReferenceImageDirectory());
+        $this->regressionFileSystem->createDirectoryRecursive($this->regressionFileSystem->getFailImageDirectory());
+    }
+
+    public function getModuleInitTime(): int
+    {
+        return self::$moduleInitTime;
     }
 
     /**
      * Specifies class or module which is required for current one.
-     *
-     * @return array
      */
-    public function _depends()
+    public function _depends(): array
     {
-        return array('\\Codeception\\Module\\WebDriver' => 'This module requires the WebDriver module');
+        return [
+            WebDriver::class => 'This module requires the WebDriver module'
+        ];
+    }
+
+    public function _inject(WebDriver $browser)
+    {
+        $this->webDriver = $browser;
     }
 
     /**
@@ -116,104 +117,93 @@ class CssRegression extends Module implements DependsOnModule
      *
      * @param array $settings
      */
-    public function _beforeSuite($settings = [])
+    public function _beforeSuite($settings = []): void
     {
-        $this->suitePath = $settings['path'];
-        $this->hiddenSuiteElements = array();
-    }
-
-    /**
-     * Before each scenario
-     *
-     * @param TestCase $test
-     */
-    public function _before(TestCase $test)
-    {
-        $this->currentTestCase = $test;
-    }
-
-    /**
-     * @param WebDriver $browser
-     */
-    public function _inject(WebDriver $browser)
-    {
-        $this->webDriver = $browser;
-    }
-
-    /**
-     * After each step
-     *
-     * @param Step $step
-     */
-    public function _afterStep(Step $step)
-    {
-        if ($step->getAction() === 'seeNoDifferenceToReferenceImage') {
-            // cleanup the temp image
-            if (file_exists($this->moduleFileSystemUtil->getTempImagePath($step->getArguments()[0]))) {
-                @unlink($this->moduleFileSystemUtil->getTempImagePath($step->getArguments()[0]));
-            }
+        $webDriverModule = $this->getModule($this->config['module']);
+        if (
+             !is_a($webDriverModule, ScreenshotSaver::class)
+            || !is_a($webDriverModule, ElementLocator::class)
+        ) {
+            throw new ModuleException($this, 'Config module must implement ElementLocator and ScreenshotSaver');
         }
+        $this->webDriver = $webDriverModule;
+        $this->hiddenSuiteElements = [];
     }
 
-    /**
-     * @param string $referenceImageIdentifier
-     * @param null|string $selector
-     * @param null|float $maxDifference
-     * @param null|string $referenceImagePath
-     * @throws ModuleException
-     */
+    public function _afterStep(Step $step): void
+    {
+        // cleanup the temp image
+        if ($step->getAction() !== 'seeNoDifferenceToReferenceImage') {
+            return;
+        }
+
+        $tempImage = $this->getTempImagePath($step->getArguments()[0], $step->getArguments()[3]);
+
+        if (!file_exists($tempImage)) {
+            return;
+        }
+
+        @unlink($tempImage);
+    }
+
+    private function getTempImagePath(string $fileName, string $path): string
+    {
+        return $this->regressionFileSystem->getTempDirectory() .
+            DIRECTORY_SEPARATOR .
+            $path .
+            DIRECTORY_SEPARATOR .
+            $this->regressionFileSystem->sanitizeFilename($fileName);
+    }
+
     public function seeNoDifferenceToReferenceImage(
-        string $referenceImageIdentifier,
-        string $selector = null,
-        float $maxDifference = null,
-        string $referenceImagePath = null
-    ) {
+        string                   $referenceImageIdentifier,
+        WebDriverBy|string|array $selector = null,
+        float                    $maxDifference = null,
+        string                   $referenceImagePath = null
+    ): void
+    {
         if ($selector === null) {
             $selector = 'body';
         }
 
         $elements = $this->webDriver->_findElements($selector);
 
-        if (count($elements) == 0) {
-            throw new ElementNotFound($selector);
-        } elseif (count($elements) > 1) {
-            throw new ModuleException(__CLASS__,
+        if (count($elements) > 1) {
+            throw new ModuleException(self::class,
                 'Multiple elements found for given selector "' . $selector . '" but need exactly one element!');
         }
-        /** @var RemoteWebElement $element */
-        $image = $this->_createScreenshot($referenceImagePath . $referenceImageIdentifier, reset($elements));
 
-        $windowSizeString = $this->moduleFileSystemUtil->getCurrentWindowSizeString($this->webDriver);
-        $referenceImagePath = $this->moduleFileSystemUtil->getReferenceImagePath(
+        $image = $this->_createScreenshot(
+            $this->getTempImagePath($referenceImageIdentifier, $referenceImagePath),
+            reset($elements)
+        );
+
+        $referenceImagePath = $this->regressionFileSystem->getReferenceImagePath(
             $referenceImageIdentifier,
             $referenceImagePath
         );
 
         if (!file_exists($referenceImagePath)) {
             // Ensure that the target directory exists
-            $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($referenceImagePath));
+            $this->regressionFileSystem->createDirectoryRecursive(dirname($referenceImagePath));
             copy($image->getImageFilename(), $referenceImagePath);
             $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
-            $referenceImage = new \Imagick($referenceImagePath);
+            $imagick = new \Imagick($referenceImagePath);
 
             /** @var \Imagick $comparedImage */
-            list($comparedImage, $difference) = $referenceImage->compareImages($image,
-                \Imagick::METRIC_MEANSQUAREERROR);
+            [$comparedImage, $difference] = $imagick->compareImages($image, \Imagick::METRIC_MEANSQUAREERROR);
 
-            $calculatedDifferenceValue = round((float)substr($difference, 0, 6) * 100, 2);
-
-            $this->_getCurrentTestCase()->getScenario()->comment(
-                'Difference between reference and current image is around ' . $calculatedDifferenceValue . '%'
-            );
+            $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6) * 100, 2);
 
             $maxDifference ??= $this->config['maxDifference'];
             if ($calculatedDifferenceValue > $maxDifference) {
-                $diffImagePath = $this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'diff');
+                $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
 
-                $this->moduleFileSystemUtil->createDirectoryRecursive(dirname($diffImagePath));
+                $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
 
-                $image->writeImage($this->moduleFileSystemUtil->getFailImagePath($referenceImageIdentifier, $windowSizeString, 'fail'));
+                $image->writeImage($this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail'));
+
                 $comparedImage->setImageFormat('png');
                 $comparedImage->writeImage($diffImagePath);
                 $this->fail('Image does not match to the reference image.');
@@ -224,21 +214,18 @@ class CssRegression extends Module implements DependsOnModule
         }
     }
 
-    public function hideElements($selector)
+    public function hideElements(WebDriverBy|string|array $selector): void
     {
         $selectedElements = $this->webDriver->_findElements($selector);
 
-        foreach ($selectedElements as $element) {
-            $elementVisibility = $element->getCSSValue('visibility');
+        foreach ($selectedElements as $selectedElement) {
+            $elementVisibility = $selectedElement->getCSSValue('visibility');
 
             if ($elementVisibility != 'hidden') {
-                $this->hiddenSuiteElements[$element->getID()] = array(
-                    'visibilityBackup' => $elementVisibility,
-                    'element' => $element
-                );
-                $this->webDriver->webDriver->executeScript(
-                    'arguments[0].style.visibility = \'hidden\';',
-                    array($element)
+                $this->hiddenSuiteElements[$selectedElement->getID()] = ['visibilityBackup' => $elementVisibility, 'element' => $selectedElement];
+                $this->webDriver->executeScript(
+                    "arguments[0].style.visibility = 'hidden';",
+                    [$selectedElement]
                 );
             }
         }
@@ -248,20 +235,20 @@ class CssRegression extends Module implements DependsOnModule
      * Will unhide the element for the given selector or unhide all elements that have been set to hidden before if
      * no selector is given.
      *
-     * @param string|null $selector The selector of the element that should be unhidden nor null if all elements should
+     * @param WebDriverBy|string|array $selector The selector of the element that should be unhidden nor null if all elements should
      * be unhidden that have been set to hidden before.
      */
-    public function unhideElements($selector = null)
+    public function unhideElements(WebDriverBy|string|array $selector = null): void
     {
         if ($selector === null) {
-            foreach ($this->hiddenSuiteElements as $elementData) {
-                $this->webDriver->webDriver->executeScript(
-                    'arguments[0].style.visibility = \'' . $elementData['visibilityBackup'] . '\';',
-                    array($elementData['element'])
+            foreach ($this->hiddenSuiteElements as $hiddenSuiteElement) {
+                $this->webDriver->executeScript(
+                    "arguments[0].style.visibility = '" . $hiddenSuiteElement['visibilityBackup'] . "';",
+                    [$hiddenSuiteElement['element']]
                 );
             }
 
-            $this->hiddenSuiteElements = array();
+            $this->hiddenSuiteElements = [];
         } else {
             $elements = $this->webDriver->_findElements($selector);
             foreach ($elements as $element) {
@@ -271,9 +258,10 @@ class CssRegression extends Module implements DependsOnModule
                 } else {
                     $visibility = 'visible';
                 }
-                $this->webDriver->webDriver->executeScript(
-                    'arguments[0].style.visibility = \'' . $visibility . '\';',
-                    array($element)
+
+                $this->webDriver->executeScript(
+                    "arguments[0].style.visibility = '" . $visibility . "';",
+                    [$element]
                 );
             }
         }
@@ -282,62 +270,25 @@ class CssRegression extends Module implements DependsOnModule
     /**
      * Create screenshot for an element
      *
-     * @param string $referenceImageName
-     * @param RemoteWebElement $element
-     * @return \Imagick
+     * @param RemoteWebElement $remoteWebElement
      */
-    protected function _createScreenshot($referenceImageName, RemoteWebElement $element)
+    private function _createScreenshot(string $tempImagePath, RemoteWebElement $remoteWebElement): \Imagick
     {
         // Try scrolling the element into the view port
-        $element->getLocationOnScreenOnceScrolledIntoView();
+        $remoteWebElement->getLocationOnScreenOnceScrolledIntoView();
 
-        $tempImagePath = $this->moduleFileSystemUtil->getTempImagePath($referenceImageName);
-        $this->webDriver->webDriver->takeScreenshot($tempImagePath);
+        $this->webDriver->_saveScreenshot($tempImagePath);
 
-        $image = new \Imagick($tempImagePath);
-        $image->cropImage(
-            $element->getSize()->getWidth(),
-            $element->getSize()->getHeight(),
-            $element->getCoordinates()->onPage()->getX(),
-            $element->getCoordinates()->onPage()->getY()
+        $imagick = new \Imagick($tempImagePath);
+        $imagick->cropImage(
+            $remoteWebElement->getSize()->getWidth(),
+            $remoteWebElement->getSize()->getHeight(),
+            $remoteWebElement->getCoordinates()->onPage()->getX(),
+            $remoteWebElement->getCoordinates()->onPage()->getY()
         );
-        $image->setImageFormat('png');
-        $image->writeImage($tempImagePath);
+        $imagick->setImageFormat('png');
+        $imagick->writeImage($tempImagePath);
 
-        return $image;
-    }
-
-    /**
-     * @return null|TestCase
-     */
-    public function _getCurrentTestCase()
-    {
-        if ($this->currentTestCase instanceof TestCase) {
-            return $this->currentTestCase;
-        }
-        return null;
-    }
-
-    /**
-     * The time when the module has been initalized
-     *
-     * @return int timestamp
-     */
-    public function _getModuleInitTime()
-    {
-        return self::$moduleInitTime;
-    }
-
-    /**
-     * @return string
-     */
-    public function _getSuitePath()
-    {
-        return $this->suitePath;
-    }
-
-    public function _getWebdriver()
-    {
-        return $this->webDriver;
+        return $imagick;
     }
 }
