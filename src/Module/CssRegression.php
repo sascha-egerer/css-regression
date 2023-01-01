@@ -189,7 +189,7 @@ final class CssRegression extends Module implements DependsOnModule
             copy($image->getImageFilename(), $referenceImageFilePath);
             $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
-            $imagick = new \Imagick($referenceImagePath);
+            $imagick = new \Imagick($referenceImageFilePath);
 
             /** @var \Imagick $comparedImage */
             [$comparedImage, $difference] = $imagick->compareImages($image, \Imagick::METRIC_MEANSQUAREERROR);
@@ -199,7 +199,6 @@ final class CssRegression extends Module implements DependsOnModule
             $maxDifference ??= $this->config['maxDifference'];
             if ($calculatedDifferenceValue > $maxDifference) {
                 $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
-
                 $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
 
                 $image->writeImage($this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail'));
