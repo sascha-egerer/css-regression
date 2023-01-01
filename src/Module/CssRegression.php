@@ -178,15 +178,15 @@ final class CssRegression extends Module implements DependsOnModule
             reset($elements)
         );
 
-        $referenceImagePath = $this->regressionFileSystem->getReferenceImagePath(
+        $referenceImageFilePath = $this->regressionFileSystem->getReferenceImagePath(
             $referenceImageIdentifier,
             $referenceImagePath
         );
 
-        if (!file_exists($referenceImagePath)) {
+        if (!file_exists($referenceImageFilePath)) {
             // Ensure that the target directory exists
-            $this->regressionFileSystem->createDirectoryRecursive(dirname($referenceImagePath));
-            copy($image->getImageFilename(), $referenceImagePath);
+            $this->regressionFileSystem->createDirectoryRecursive(dirname($referenceImageFilePath));
+            copy($image->getImageFilename(), $referenceImageFilePath);
             $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
             $imagick = new \Imagick($referenceImagePath);
