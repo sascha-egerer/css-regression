@@ -107,6 +107,8 @@ final class CssRegressionReporter extends \Codeception\Extension
             $reportPath = $this->fileSystem->getFailImageDirectory() . 'index.html';
 
             file_put_contents($reportPath, $pageTemplate->produce());
+            copy($this->config['templateFolder'] . 'index.css', $this->fileSystem->getFailImageDirectory() . 'index.css');
+            copy($this->config['templateFolder'] . 'index.js', $this->fileSystem->getFailImageDirectory() . 'index.js');
 
             $latestLinkPath = dirname($this->fileSystem->getFailImageDirectory()) . '/latest';
             if (is_link($latestLinkPath)) {

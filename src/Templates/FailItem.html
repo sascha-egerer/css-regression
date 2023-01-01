@@ -1,10 +1,9 @@
 <h2>{{referenceImagePath}} @ {{windowSize}}</h2>
 
-<h3>Reference:</h3>
-<img src='data:image/png;base64,{{referenceImage}}' />
+<img-comparison-slider>
+    <img slot="first" src="data:image/png;base64,{{referenceImage}}" />
+    <img slot="second" src="data:image/png;base64,{{failImage}}" />
+</img-comparison-slider>
 
 <h3>Difference:</h3>
 <img src='data:image/png;base64,{{diffImage}}' />
-
-<h3>Failed:</h3>
-<img src='data:image/png;base64,{{failImage}}' />
