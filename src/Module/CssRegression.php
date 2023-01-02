@@ -36,7 +36,7 @@ final class CssRegression extends Module implements DependsOnModule
     /**
      * @var array{maxDifference: float, automaticCleanup: bool, module: string}
      */
-    protected $config = [
+    protected array $config = [
         'maxDifference' => 0.01,
         'automaticCleanup' => true,
         'module' => 'WebDriver',
@@ -47,7 +47,7 @@ final class CssRegression extends Module implements DependsOnModule
     /**
      * @var array
      */
-    protected $requiredFields = [
+    protected array $requiredFields = [
         'referenceImageDirectory',
         'failImageDirectory'
     ];

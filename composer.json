@@ -10,7 +10,7 @@
     }
   ],
   "require": {
-    "codeception/codeception": "~4.2",
+    "codeception/codeception": "~5.0",
     "codeception/module-webdriver": "*",
     "php": ">=8.1",
     "ext-imagick": "*"

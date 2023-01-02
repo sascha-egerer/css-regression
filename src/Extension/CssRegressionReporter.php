@@ -49,7 +49,7 @@ final class CssRegressionReporter extends \Codeception\Extension
 
     private ?\SaschaEgerer\CodeceptionCssRegression\Util\FileSystem $fileSystem = null;
 
-    protected $config = [
+    protected array $config = [
         'templateFolder' => null
     ];
 
@@ -57,7 +57,7 @@ final class CssRegressionReporter extends \Codeception\Extension
      * @param $config
      * @param $options
      */
-    function __construct($config, $options)
+    function __construct(array $config, $options)
     {
         if (empty($this->config['templateFolder'])) {
             $this->config['templateFolder'] = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Templates';
@@ -116,10 +116,6 @@ final class CssRegressionReporter extends \Codeception\Extension
             }
 
             symlink(basename($this->fileSystem->getFailImageDirectory()), $latestLinkPath);
-
-            $printResultEvent->getPrinter()->write("\n");
-            $printResultEvent->getPrinter()->write('❗Report has been created: ' . $latestLinkPath . "/index.html ❗\n");
-            $printResultEvent->getPrinter()->write("\n");
         }
     }
 
