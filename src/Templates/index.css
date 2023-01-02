@@ -13,3 +13,8 @@ img-comparison-slider.rendered {
 img-comparison-slider.rendered [slot='second'] {
     display: unset;
 }
+
+img-comparison-slider {
+    --default-handle-shadow: 0px 1px 1px black;
+    --divider-shadow: 0px 1px 1px black;
+}
