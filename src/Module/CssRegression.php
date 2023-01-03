@@ -159,7 +159,8 @@ final class CssRegression extends Module implements DependsOnModule
         string                   $referenceImageIdentifier,
         WebDriverBy|string|array $selector = null,
         float                    $maxDifference = null,
-        string                   $referenceImagePath = null
+        string                   $referenceImagePath = null,
+        float                    $fuzz = 0
     ): void
     {
         if ($selector === null) {
@@ -189,7 +190,9 @@ final class CssRegression extends Module implements DependsOnModule
             copy($image->getImageFilename(), $referenceImageFilePath);
             $this->markTestIncomplete('Reference Image does not exist. Test is skipped but will now copy reference image to target directory...');
         } else {
-            $imagick = new \Imagick($referenceImageFilePath);
+            $imagick = new \Imagick();
+            $imagick->setOption('fuzz', $fuzz . '%');
+            $imagick->readImage($referenceImageFilePath);
 
             /** @var \Imagick $comparedImage */
             [$comparedImage, $difference] = $imagick->compareImages($image, \Imagick::METRIC_MEANSQUAREERROR);
