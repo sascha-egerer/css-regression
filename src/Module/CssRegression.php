@@ -2,6 +2,7 @@
 
 namespace SaschaEgerer\CodeceptionCssRegression\Module;
 
+use Codeception\Event\FailEvent;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Interfaces\DependsOnModule;
 use Codeception\Lib\Interfaces\ElementLocator;
@@ -9,6 +10,8 @@ use Codeception\Lib\Interfaces\ScreenshotSaver;
 use Codeception\Module;
 use Codeception\Module\WebDriver;
 use Codeception\Step;
+use Codeception\Test\Cest;
+use Codeception\TestInterface;
 use Codeception\Util\FileSystem;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\RemoteWebElement;
@@ -43,6 +46,8 @@ final class CssRegression extends Module implements DependsOnModule
     ];
 
     private ScreenshotSaver|RemoteWebDriver|ElementLocator $webDriver;
+
+    private Cest $currentTest;
 
     /**
      * @var array
@@ -130,6 +135,11 @@ final class CssRegression extends Module implements DependsOnModule
         $this->hiddenSuiteElements = [];
     }
 
+    public function _before(TestInterface $test)
+    {
+        $this->currentTest = $test;
+    }
+
     public function _afterStep(Step $step): void
     {
         // cleanup the temp image
@@ -160,7 +170,7 @@ final class CssRegression extends Module implements DependsOnModule
         WebDriverBy|string|array $selector = null,
         float                    $maxDifference = null,
         string                   $referenceImagePath = null,
-        float                    $fuzz = 0
+        float                    $fuzz = 0.4
     ): void
     {
         if ($selector === null) {
@@ -192,27 +202,59 @@ final class CssRegression extends Module implements DependsOnModule
         } else {
             $imagick = new \Imagick();
             $imagick->setOption('fuzz', $fuzz . '%');
+
             $imagick->readImage($referenceImageFilePath);
 
             /** @var \Imagick $comparedImage */
-            [$comparedImage, $difference] = $imagick->compareImages($image, \Imagick::METRIC_MEANSQUAREERROR);
-
-            $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6) * 100, 2);
-
-            $maxDifference ??= $this->config['maxDifference'];
-            if ($calculatedDifferenceValue > $maxDifference) {
-                $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
-                $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
-
-                $image->writeImage($this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail'));
-
-                $comparedImage->setImageFormat('png');
-                $comparedImage->writeImage($diffImagePath);
-                $this->fail('Image does not match to the reference image.');
-            } else {
-                // do an assertion to get correct assertion count
+            [$comparedImage, $absoluteDifference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_ABSOLUTEERRORMETRIC);
+            $this->currentTest->getScenario()->comment(
+                sprintf(
+                    'See an absolute difference of %f with a fuzz value of %f',
+                    $absoluteDifference,
+                    $imagick->getOption('fuzz')
+                )
+            );
+            if ((float)$absoluteDifference === 0.0) {
                 $this->assertTrue(true);
+                return;
             }
+
+            [$comparedImage, $difference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_MEANSQUAREERROR);
+            $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6), 2);
+            $this->currentTest->getScenario()->comment(
+                sprintf(
+                    'See a METRIC_MEANSQUAREERROR difference of %f',
+                    $calculatedDifferenceValue,
+                )
+            );
+            $maxDifference ??= $this->config['maxDifference'];
+
+            if ($calculatedDifferenceValue < $maxDifference) {
+                $this->currentTest->getScenario()->comment(
+                    sprintf(
+                        'Max difference of %f is heiger than detected difference of %f',
+                        $maxDifference,
+                        $calculatedDifferenceValue
+                    )
+                );
+                $this->assertLessThan($maxDifference, $difference);
+                return;
+            }
+            $this->currentTest->getScenario()->comment(
+                sprintf(
+                    'Max difference of %f is lower than detected difference of %f',
+                    $maxDifference,
+                    $calculatedDifferenceValue
+                )
+            );
+            $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
+            $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
+
+            $image->writeImage($this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail'));
+
+            $comparedImage->setImageFormat('png');
+            $comparedImage->writeImage($diffImagePath);
+            $this->assertLessThan($difference, $maxDifference, 'Image does not match to the reference image.');
         }
     }
 
