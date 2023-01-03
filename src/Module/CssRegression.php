@@ -165,6 +165,10 @@ final class CssRegression extends Module implements DependsOnModule
             $this->regressionFileSystem->sanitizeFilename($fileName);
     }
 
+    /**
+     * @param float $fuzz Float value that is converted to percentage value. See
+     * @see https://www.imagemagick.org/script/command-line-options.php#fuzz
+     */
     public function seeNoDifferenceToReferenceImage(
         string                   $referenceImageIdentifier,
         WebDriverBy|string|array $selector = null,
@@ -205,8 +209,14 @@ final class CssRegression extends Module implements DependsOnModule
 
             $imagick->readImage($referenceImageFilePath);
 
+            /** @var \Imagick $absoluteComparedImage */
+            [$absoluteComparedImage, $absoluteDifference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_ABSOLUTEERRORMETRIC);
+            [$comparedImage, $difference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_MEANSQUAREERROR);
+
             /** @var \Imagick $comparedImage */
-            [$comparedImage, $absoluteDifference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_ABSOLUTEERRORMETRIC);
+            $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6), 2);
+            $maxDifference ??= $this->config['maxDifference'];
+
             $this->currentTest->getScenario()->comment(
                 sprintf(
                     'See an absolute difference of %f with a fuzz value of %f',
@@ -215,36 +225,37 @@ final class CssRegression extends Module implements DependsOnModule
                 )
             );
 
-            if ((float)$absoluteDifference === 0.0) {
-                [$comparedImage, $difference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_MEANSQUAREERROR);
-                $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6), 2);
-                $this->currentTest->getScenario()->comment(
-                    sprintf(
-                        'See a METRIC_MEANSQUAREERROR difference of %f',
-                        $calculatedDifferenceValue,
-                    )
-                );
-                $maxDifference ??= $this->config['maxDifference'];
-
-                if ($calculatedDifferenceValue < $maxDifference) {
-                    $this->currentTest->getScenario()->comment(
-                        sprintf(
-                            'Max difference of %f is heiger than detected difference of %f',
-                            $maxDifference,
-                            $calculatedDifferenceValue
-                        )
-                    );
-                    $this->assertLessThan($maxDifference, $difference);
-                    return;
-                }
-                $this->currentTest->getScenario()->comment(
-                    sprintf(
-                        'Max difference of %f is lower than detected difference of %f',
-                        $maxDifference,
-                        $calculatedDifferenceValue
-                    )
-                );
+            $this->currentTest->getScenario()->comment(
+                sprintf(
+                    'See a METRIC_MEANSQUAREERROR difference of %f',
+                    $calculatedDifferenceValue,
+                )
+            );
+            if ((float)$absoluteDifference === 0.0 || $calculatedDifferenceValue < $maxDifference) {
+                $this->assertEquals(0.0, $absoluteDifference, 'Images are different');
+                $this->assertLessThanOrEqual($maxDifference, $calculatedDifferenceValue, 'Images are different');
+                // Stop if we've not found any absolute difference
+                return;
             }
+
+            if ($calculatedDifferenceValue < $maxDifference) {
+                $this->currentTest->getScenario()->comment(
+                    sprintf(
+                        'Detected difference %f is lower than max allowed difference of %f',
+                        $calculatedDifferenceValue,
+                        $maxDifference
+                    )
+                );
+                $this->assertLessThan($maxDifference, $difference);
+                return;
+            }
+            $this->currentTest->getScenario()->comment(
+                sprintf(
+                    'Detected difference %f is heigher than max allowed difference of %f',
+                    $calculatedDifferenceValue,
+                    $maxDifference
+                )
+            );
             $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
             $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
 
@@ -253,10 +264,10 @@ final class CssRegression extends Module implements DependsOnModule
             $comparedImage->setImageFormat('png');
             $comparedImage->writeImage($diffImagePath);
 
-            $this->assertEquals(0, $absoluteDifference, 'Images are different');
             if ($difference !== null) {
                 $this->assertLessThan($difference, $maxDifference, 'Image does not match to the reference image.');
             }
+            $this->assertEquals(0, $absoluteDifference, 'Images are different');
         }
     }
 
