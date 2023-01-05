@@ -174,7 +174,7 @@ final class CssRegression extends Module implements DependsOnModule
         WebDriverBy|string|array $selector = null,
         float                    $maxDifference = null,
         string                   $referenceImagePath = null,
-        float                    $fuzz = 0.4
+        float                    $fuzz = 0.3
     ): void
     {
         if ($selector === null) {
@@ -212,7 +212,7 @@ final class CssRegression extends Module implements DependsOnModule
             /** @var \Imagick $absoluteComparedImage */
             [$absoluteComparedImage, $absoluteDifference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_ABSOLUTEERRORMETRIC);
             [$comparedImage, $difference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_MEANSQUAREERROR);
-
+            $absoluteDifference = (float)$absoluteDifference;
             /** @var \Imagick $comparedImage */
             $calculatedDifferenceValue = round((float)substr((string)$difference, 0, 6), 2);
             $maxDifference ??= $this->config['maxDifference'];
@@ -231,14 +231,14 @@ final class CssRegression extends Module implements DependsOnModule
                     $calculatedDifferenceValue,
                 )
             );
-            if ((float)$absoluteDifference === 0.0 || $calculatedDifferenceValue < $maxDifference) {
-                $this->assertEquals(0.0, $absoluteDifference, 'Images are different');
-                $this->assertLessThanOrEqual($maxDifference, $calculatedDifferenceValue, 'Images are different');
+            if ($absoluteDifference === 0.0) {
                 // Stop if we've not found any absolute difference
+                // We have to add a valid assertion.
+                $this->assertTrue(true);
                 return;
             }
 
-            if ($calculatedDifferenceValue < $maxDifference) {
+            if ($absoluteDifference === 0.0 && $calculatedDifferenceValue < $maxDifference) {
                 $this->currentTest->getScenario()->comment(
                     sprintf(
                         'Detected difference %f is lower than max allowed difference of %f',
@@ -259,7 +259,8 @@ final class CssRegression extends Module implements DependsOnModule
             $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
             $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
 
-            $image->writeImage($this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail'));
+            $failImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'fail');
+            $image->writeImage($failImagePath);
 
             $comparedImage->setImageFormat('png');
             $comparedImage->writeImage($diffImagePath);
@@ -267,7 +268,11 @@ final class CssRegression extends Module implements DependsOnModule
             if ($difference !== null) {
                 $this->assertLessThan($difference, $maxDifference, 'Image does not match to the reference image.');
             }
-            $this->assertEquals(0, $absoluteDifference, 'Images are different');
+            $this->assertEquals(0, $absoluteDifference, sprintf(
+                'Reference image %s is different from current image %s',
+                $referenceImageFilePath,
+                $failImagePath
+            ));
         }
     }
 
