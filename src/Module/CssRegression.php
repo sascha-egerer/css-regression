@@ -208,6 +208,7 @@ final class CssRegression extends Module implements DependsOnModule
             $imagick->setOption('fuzz', $fuzz . '%');
 
             $imagick->readImage($referenceImageFilePath);
+            $imagick->stripImage();
 
             /** @var \Imagick $absoluteComparedImage */
             [$absoluteComparedImage, $absoluteDifference] = $imagick->compareImageChannels($image, \Imagick::CHANNEL_ALL,  \Imagick::METRIC_ABSOLUTEERRORMETRIC);
@@ -349,6 +350,7 @@ final class CssRegression extends Module implements DependsOnModule
             $remoteWebElement->getCoordinates()->onPage()->getY()
         );
         $imagick->setImageFormat('png');
+        $imagick->stripImage();
         $imagick->writeImage($tempImagePath);
 
         return $imagick;
