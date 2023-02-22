@@ -239,7 +239,7 @@ final class CssRegression extends Module implements DependsOnModule
                 return;
             }
 
-            if ($absoluteDifference === 0.0 && $calculatedDifferenceValue < $maxDifference) {
+            if ($calculatedDifferenceValue < $maxDifference) {
                 $this->currentTest->getScenario()->comment(
                     sprintf(
                         'Detected difference %f is lower than max allowed difference of %f',
