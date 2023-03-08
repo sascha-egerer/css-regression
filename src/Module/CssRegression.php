@@ -242,21 +242,21 @@ final class CssRegression extends Module implements DependsOnModule
             if ($calculatedDifferenceValue < $maxDifference) {
                 $this->currentTest->getScenario()->comment(
                     sprintf(
-                        'Detected difference %f is lower than max allowed difference of %f',
+                        'Detected difference %f is lower than max allowed difference of %f but absolute difference has been detected',
                         $calculatedDifferenceValue,
                         $maxDifference
                     )
                 );
-                $this->assertLessThan($maxDifference, $difference);
-                return;
+            } else {
+                $this->currentTest->getScenario()->comment(
+                    sprintf(
+                        'Detected difference %f is heigher than max allowed difference of %f',
+                        $calculatedDifferenceValue,
+                        $maxDifference
+                    )
+                );
             }
-            $this->currentTest->getScenario()->comment(
-                sprintf(
-                    'Detected difference %f is heigher than max allowed difference of %f',
-                    $calculatedDifferenceValue,
-                    $maxDifference
-                )
-            );
+
             $diffImagePath = $this->regressionFileSystem->getFailImagePath($referenceImageIdentifier, $referenceImagePath, 'diff');
             $this->regressionFileSystem->createDirectoryRecursive(dirname($diffImagePath));
 
