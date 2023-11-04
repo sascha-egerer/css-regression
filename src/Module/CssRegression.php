@@ -13,10 +13,12 @@ use Codeception\Step;
 use Codeception\Test\Cest;
 use Codeception\TestInterface;
 use Codeception\Util\FileSystem;
+use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\RemoteWebElement;
 use Facebook\WebDriver\WebDriverBy;
 use SaschaEgerer\CodeceptionCssRegression\Util\FileSystem as RegressionFileSystem;
+use function Deployer\writeln;
 
 /**
  * Compares a screenshot of an element against a reference image
@@ -338,21 +340,38 @@ final class CssRegression extends Module implements DependsOnModule
     private function _createScreenshot(string $tempImagePath, RemoteWebElement $remoteWebElement): \Imagick
     {
         // Try scrolling the element into the view port
-        $remoteWebElement->getLocationOnScreenOnceScrolledIntoView();
+        $bodySize = $this->webDriver->_findElements(WebDriverBy::cssSelector('body'))[0]->getSize();
+        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($bodySize): void {
+            $devTools = new ChromeDevToolsDriver($driver);
 
-        $this->webDriver->_saveScreenshot($tempImagePath);
+            $devTools->execute(
+                'Emulation.setDeviceMetricsOverride',
+                [
+                    'mobile' => false,
+                    'screenWidth' => $bodySize->getWidth(),
+                    'screenHeight' => $bodySize->getHeight(),
+                    'width' => $bodySize->getWidth(),
+                    'height' => $bodySize->getHeight(),
+                    'positionX' => 0,
+                    'positionY' => 0,
+                    'scale' => 1,
+                    'deviceScaleFactor' => 1,
+                    'screenOrientation' => [
+                        'angle' => 0,
+                        'type' => 'portraitPrimary',
+                    ],
+                ]
+            );
+        });
+
+        $remoteWebElement->getLocationOnScreenOnceScrolledIntoView();
+        $remoteWebElement->takeElementScreenshot($tempImagePath);
 
         $imagick = new \Imagick($tempImagePath);
-        $imagick->cropImage(
-            $remoteWebElement->getSize()->getWidth(),
-            $remoteWebElement->getSize()->getHeight(),
-            $remoteWebElement->getCoordinates()->onPage()->getX(),
-            $remoteWebElement->getCoordinates()->onPage()->getY()
-        );
         $imagick->setImageFormat('png');
         $imagick->stripImage();
         $imagick->writeImage($tempImagePath);
-
+        $imagick->writeImage($tempImagePath . '__');
         return $imagick;
     }
 }
