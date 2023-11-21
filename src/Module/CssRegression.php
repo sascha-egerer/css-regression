@@ -185,10 +185,7 @@ final class CssRegression extends Module implements DependsOnModule
 
         $elements = $this->webDriver->_findElements($selector);
 
-        if (count($elements) > 1) {
-            throw new ModuleException(self::class,
-                'Multiple elements found for given selector "' . $selector . '" but need exactly one element!');
-        }
+        $this->assertCount(1, $elements, 'Could not find excactly one element for given selector "' . $selector . '"');
 
         $image = $this->_createScreenshot(
             $this->getTempImagePath($referenceImageIdentifier, $referenceImagePath),
