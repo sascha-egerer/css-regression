@@ -346,18 +346,13 @@ final class CssRegression extends Module implements DependsOnModule
             $height += 10;
             $height += $height % 2;
 
-            $width = $bodySize->getWidth();
-            // increase width by 10px and ensure that we have a evan number
-            $width += 10;
-            $width += $width % 2;
-
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
                 [
                     'mobile' => false,
-                    'screenWidth' => $width,
+                    'screenWidth' => $bodySize->getWidth(),
                     'screenHeight' => $height,
-                    'width' => $width,
+                    'width' => $bodySize->getWidth(),
                     'height' => $height,
                     'positionX' => 0,
                     'positionY' => 0,
