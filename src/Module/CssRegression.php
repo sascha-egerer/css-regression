@@ -354,8 +354,8 @@ final class CssRegression extends Module implements DependsOnModule
                     'screenHeight' => $height,
                     'width' => $bodySize->getWidth(),
                     'height' => $height,
-                    'positionX' => 0,
-                    'positionY' => 0,
+                    'positionX' => 1,
+                    'positionY' => 1,
                     'scale' => 1,
                     'deviceScaleFactor' => 1,
                     'screenOrientation' => [
@@ -364,6 +364,8 @@ final class CssRegression extends Module implements DependsOnModule
                     ],
                 ]
             );
+
+            $this->webDriver->wait(0.1);
         });
 
         $remoteWebElement->takeElementScreenshot($tempImagePath);
