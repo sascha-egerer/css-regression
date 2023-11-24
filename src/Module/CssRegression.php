@@ -342,17 +342,15 @@ final class CssRegression extends Module implements DependsOnModule
             $devTools = new ChromeDevToolsDriver($driver);
 
             $height = $bodySize->getHeight();
-            // increase height by 10px and ensure that we have a evan number
-            $height += 10;
-            $height += $height % 2;
+            $width = $bodySize->getWidth();
 
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
                 [
                     'mobile' => false,
-                    'screenWidth' => $bodySize->getWidth(),
+                    'screenWidth' => $width,
                     'screenHeight' => $height,
-                    'width' => $bodySize->getWidth(),
+                    'width' => $width,
                     'height' => $height,
                     'positionX' => 1,
                     'positionY' => 1,
