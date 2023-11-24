@@ -361,7 +361,6 @@ final class CssRegression extends Module implements DependsOnModule
             );
         });
 
-        $remoteWebElement->getLocationOnScreenOnceScrolledIntoView();
         $remoteWebElement->takeElementScreenshot($tempImagePath);
 
         $imagick = new \Imagick($tempImagePath);
