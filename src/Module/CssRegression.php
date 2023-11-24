@@ -341,14 +341,24 @@ final class CssRegression extends Module implements DependsOnModule
         $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($bodySize): void {
             $devTools = new ChromeDevToolsDriver($driver);
 
+            $height = $bodySize->getHeight();
+            // increase height by 10px and ensure that we have a evan number
+            $height += 10;
+            $height += $height % 2;
+
+            $width = $bodySize->getWidth();
+            // increase width by 10px and ensure that we have a evan number
+            $width += 10;
+            $width += $width % 2;
+
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
                 [
                     'mobile' => false,
-                    'screenWidth' => $bodySize->getWidth(),
-                    'screenHeight' => $bodySize->getHeight(),
-                    'width' => $bodySize->getWidth(),
-                    'height' => $bodySize->getHeight(),
+                    'screenWidth' => $width,
+                    'screenHeight' => $height,
+                    'width' => $width,
+                    'height' => $height,
                     'positionX' => 0,
                     'positionY' => 0,
                     'scale' => 1,
