@@ -341,10 +341,9 @@ final class CssRegression extends Module implements DependsOnModule
 
         $height = $bodySize->getHeight() + 100;
         $width = $bodySize->getWidth();
-
+        $this->webDriver->resizeWindow($width, $height);
         $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($height, $width): void {
             $devTools = new ChromeDevToolsDriver($driver);
-
 
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
@@ -364,15 +363,10 @@ final class CssRegression extends Module implements DependsOnModule
                     ],
                 ]
             );
-            $this->webDriver->wait(0.1);
-
+            $driver->getMouse()->mouseMove(null, 0, 0)->click();
         });
+        $this->webDriver->wait(0.1);
 
-        try {
-            $this->webDriver->moveMouseOver('html', 1, $height);
-        } catch (\Exception $e) {
-            $this->currentTest->getScenario()->comment('Could not move mouse to 1, ' . $height . ' because of ' . $e->getMessage());
-        }
         $remoteWebElement->takeElementScreenshot($tempImagePath);
 
         $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver): void {
