@@ -341,7 +341,7 @@ final class CssRegression extends Module implements DependsOnModule
 
         $height = $bodySize->getHeight() + 100;
         $width = $bodySize->getWidth();
-        $this->webDriver->resizeWindow($width, $height);
+
         $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($height, $width): void {
             $devTools = new ChromeDevToolsDriver($driver);
 
@@ -363,7 +363,7 @@ final class CssRegression extends Module implements DependsOnModule
                     ],
                 ]
             );
-            $driver->getMouse()->mouseMove(null, 0, 0)->click();
+            $driver->getMouse()->mouseMove(null, 0, 0);
         });
         $this->webDriver->wait(0.1);
 
