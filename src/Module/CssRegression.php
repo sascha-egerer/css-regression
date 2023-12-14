@@ -368,11 +368,17 @@ final class CssRegression extends Module implements DependsOnModule
 
         $remoteWebElement->takeElementScreenshot($tempImagePath);
 
+        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($bodySize): void {
+            $devTools = new ChromeDevToolsDriver($driver);
+            $devTools->execute('Emulation.clearDeviceMetricsOverride');
+        });
+
         $imagick = new \Imagick($tempImagePath);
         $imagick->setImageFormat('png');
         $imagick->stripImage();
         $imagick->writeImage($tempImagePath);
         $imagick->writeImage($tempImagePath . '__');
+
         return $imagick;
     }
 }
