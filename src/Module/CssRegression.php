@@ -356,7 +356,7 @@ final class CssRegression extends Module implements DependsOnModule
                     'height' => $height,
                     'positionX' => 0,
                     'positionY' => 0,
-                    //'scale' => 0,
+                    'scale' => 1,
                     'deviceScaleFactor' => 1,
                     'screenOrientation' => [
                         'angle' => 0,
