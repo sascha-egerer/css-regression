@@ -338,23 +338,25 @@ final class CssRegression extends Module implements DependsOnModule
     {
         // Try scrolling the element into the view port
         $bodySize = $this->webDriver->_findElements(WebDriverBy::cssSelector('body'))[0]->getSize();
-        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($bodySize): void {
+
+        $height = $bodySize->getHeight() + 100;
+        $width = $bodySize->getWidth();
+
+        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($height, $width): void {
             $devTools = new ChromeDevToolsDriver($driver);
 
-            $height = $bodySize->getHeight();
-            $width = $bodySize->getWidth();
 
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
                 [
-                    'mobile' => false,
+                    'mobile' => true,
                     'screenWidth' => $width,
                     'screenHeight' => $height,
                     'width' => $width,
                     'height' => $height,
-                    'positionX' => 1,
-                    'positionY' => 1,
-                    'scale' => 1,
+                    'positionX' => 0,
+                    'positionY' => 0,
+                    //'scale' => 0,
                     'deviceScaleFactor' => 1,
                     'screenOrientation' => [
                         'angle' => 0,
@@ -362,13 +364,18 @@ final class CssRegression extends Module implements DependsOnModule
                     ],
                 ]
             );
-
             $this->webDriver->wait(0.1);
+
         });
 
+        try {
+            $this->webDriver->moveMouseOver('html', 1, $height);
+        } catch (\Exception $e) {
+            $this->currentTest->getScenario()->comment('Could not move mouse to 1, ' . $height . ' because of ' . $e->getMessage());
+        }
         $remoteWebElement->takeElementScreenshot($tempImagePath);
 
-        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($bodySize): void {
+        $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver): void {
             $devTools = new ChromeDevToolsDriver($driver);
             $devTools->execute('Emulation.clearDeviceMetricsOverride');
         });
