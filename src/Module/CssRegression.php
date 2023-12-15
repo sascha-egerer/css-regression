@@ -339,7 +339,7 @@ final class CssRegression extends Module implements DependsOnModule
         // Try scrolling the element into the view port
         $bodySize = $this->webDriver->_findElements(WebDriverBy::cssSelector('body'))[0]->getSize();
 
-        $height = $bodySize->getHeight() + 100;
+        $height = $bodySize->getHeight();
         $width = $bodySize->getWidth();
 
         $this->webDriver->executeInSelenium(function (RemoteWebDriver $driver) use ($height, $width): void {
@@ -363,8 +363,8 @@ final class CssRegression extends Module implements DependsOnModule
                     ],
                 ]
             );
-            $driver->getMouse()->mouseMove(null, 0, 0);
         });
+
         $this->webDriver->wait(0.1);
 
         $remoteWebElement->takeElementScreenshot($tempImagePath);
