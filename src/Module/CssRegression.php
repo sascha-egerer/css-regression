@@ -348,7 +348,7 @@ final class CssRegression extends Module implements DependsOnModule
             $devTools->execute(
                 'Emulation.setDeviceMetricsOverride',
                 [
-                    'mobile' => true,
+                    'mobile' => false,
                     'screenWidth' => $width,
                     'screenHeight' => $height,
                     'width' => $width,
